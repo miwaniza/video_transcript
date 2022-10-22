@@ -38,6 +38,7 @@ response = requests.get(endpoint, headers=headers)
 with open("transcript.srt", "w") as f:
     f.write(response.text)
 
+
 # words = response.json()["words"]
 # df = pd.DataFrame(words)
 # df.to_csv("words.csv", index=False)

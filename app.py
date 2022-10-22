@@ -1,44 +1,60 @@
 import requests
+import settings as S
+from flask import Flask
+from pyngrok import ngrok
 import json
 import pandas as pd
 
-filename = "audio.wav"
+
+class AssemblyAI:
+    def __init__(self, filepath):
+        self.headers = {
+            "authorization": S.ASSEMBLYAI.api_key,
+            "content-type": "application/json",
+        }
+        self.api_url = S.ASSEMBLYAI.api_url
+        self.filepath = filepath
+        self.file_url = self.upload_file()
+        self.job_id = self.transcribe()
+        self.srt = self.get_transcript_srt()
+
+    def read_file(self, filepath, chunk_size=5242880):
+        with open(filepath, 'rb') as _file:
+            while True:
+                data = _file.read(chunk_size)
+                if not data:
+                    break
+                yield data
+
+    def upload_file(self):
+        file_upload = requests.post(f"{self.api_url}/upload",
+                                    headers=self.headers,
+                                    data=self.read_file(self.filepath))
+        file_url = file_upload.json()['upload_url']
+        print(file_url)
+        return file_url
+
+    def transcribe(self):
+        response = requests.post(f"{self.api_url}/transcript",
+                                 headers=self.headers,
+                                 json={"audio_url": self.file_url})
+        return response.json()['id']
+
+    def get_transcript_srt(self):
+        headers = {
+            "authorization": S.ASSEMBLYAI.api_key,
+            "content-type": "application/json"
+        }
+        response = requests.get(f"{S.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
+                                headers=headers)
+        # write to file
+        with open(f"{self.job_id}.srt", 'w') as f:
+            f.write(response.text)
+        return response.text
 
 
-def read_file(filename, chunk_size=5242880):
-    with open(filename, 'rb') as _file:
-        while True:
-            data = _file.read(chunk_size)
-            if not data:
-                break
-            yield data
+if __name__ == "__main__":
+    filename = "audio.wav"
+    aai = AssemblyAI(filename)
+    print(aai.srt)
 
-
-file_upload = requests.post('https://api.assemblyai.com/v2/upload',
-                        headers=headers,
-                        data=read_file(filename))
-
-file_url = file_upload.json()['upload_url']
-
-endpoint = "https://api.assemblyai.com/v2/transcript"
-json = {
-    "audio_url": file_url
-}
-headers = {
-    "authorization": "68ae0c7c0d2945a3a411da7cb55e46c6",
-    "content-type": "application/json"
-}
-# response = requests.post(endpoint, json=json, headers=headers)
-# print(response.json())
-
-endpoint = "https://api.assemblyai.com/v2/transcript/rzb3mg9c2r-66e3-4a48-9561-0efe9c651a1d/srt"
-
-response = requests.get(endpoint, headers=headers)
-# write response text to file
-with open("transcript.srt", "w") as f:
-    f.write(response.text)
-
-
-# words = response.json()["words"]
-# df = pd.DataFrame(words)
-# df.to_csv("words.csv", index=False)

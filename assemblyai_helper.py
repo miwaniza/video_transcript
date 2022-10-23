@@ -15,7 +15,9 @@ class AssemblyAI:
         self.filepath = filepath
         self.file_url = self.upload_file()
         self.job_id = self.set_transcribe_job()
-        self.srt = self.get_transcript_srt()
+        # self.srt = self.get_transcript_srt()
+        self.transcript = self.get_transcript()
+        self.words = self.transcript['words']
 
     def upload_file(self):
         file_upload = requests.post(f"{self.api_url}/upload",
@@ -32,7 +34,21 @@ class AssemblyAI:
         return response.json()['id']
 
     def get_transcript_srt(self):
-        # await job completion
+        if self.poll_status() == 'completed':
+            response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}/{s.ASSEMBLYAI.subtitles_format}",
+                                    headers=self.headers)
+
+            with open(f"{self.job_id}.{s.ASSEMBLYAI.subtitles_format}", 'w') as f:
+                f.write(response.text)
+            return response.text
+
+    def get_transcript(self):
+        if self.poll_status() == 'completed':
+            response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
+                                    headers=self.headers)
+            return response.json()
+
+    def poll_status(self):
         while True:
             status = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
                                   headers=self.headers)
@@ -44,13 +60,7 @@ class AssemblyAI:
                 print(status.json()['status'])
                 time.sleep(s.ASSEMBLYAI.polling_interval)
                 continue
-
-        response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}/{s.ASSEMBLYAI.subtitles_format}",
-                                headers=self.headers)
-
-        with open(f"{self.job_id}.{s.ASSEMBLYAI.subtitles_format}", 'w') as f:
-            f.write(response.text)
-        return response.text
+        return status.json()['status']
 
 
 def read_file(filepath, chunk_size=s.ASSEMBLYAI.chunk_size):

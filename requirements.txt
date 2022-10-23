@@ -1,3 +1,5 @@
 requests~=2.25.1
 pandas~=1.2.4
 ffmpeg-python
+sqlalchemy
+psycopg2-binary

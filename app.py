@@ -1,13 +1,16 @@
 # from flask import Flask
 # from pyngrok import ngrok
 
-from assemblyai import AssemblyAI
-from video_helper import Video
+from assemblyai_helper import AssemblyAI
+from audio_helper import Audio
+from TranscriptDB import AudioFile
+
+import settings as s
+# from threading import Thread
+
 
 if __name__ == "__main__":
-    video = Video("video.mp4", 0, 60)
-    audio_filepath = video.audio_filepath
-    print(audio_filepath)
+    audio = Audio('video.mp4', 0, 60)
+    audiofile = AudioFile(audio.audio_filepath)
 
-    aai = AssemblyAI(audio_filepath)
-    print(aai.srt)
+

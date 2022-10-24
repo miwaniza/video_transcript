@@ -1,11 +1,13 @@
 import datetime
 
+import pandas as pd
 from sqlalchemy import Column, Integer, DateTime, String, Float
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import settings as s
 from audio_helper import Audio
 import assemblyai_helper as aai
+import pdf_helper
 
 engine = create_engine(s.DATABASE.DB_URL, echo=True)
 Base = declarative_base()
@@ -103,6 +105,79 @@ class Word(Base):
 
     def __repr__(self):
         return f"Words(word={self.word}, start={self.start}, end={self.end}, audio_clip_id={self.audio_clip_id})"
+
+    def save(self):
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        session.add(self)
+        session.commit()
+        self.id = self.id
+
+
+class PDF(Base):
+    __tablename__ = "pdfs"
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    file_path = Column(String)
+    layout_type = Column(Integer)
+    text = Column(String)
+    audio_file_id = Column(Integer)
+
+    def __init__(self, file_path, audio_file_id, layout_type):
+        self.id = None
+        self.audio_file_id = audio_file_id
+        self.file_path = file_path
+        self.layout_type = layout_type
+        self.fixed_layout = self.fix_layout()
+        self.save()
+        self.save_lines()
+
+    def __repr__(self):
+        return f"AudioFile(file_path={self.file_path}, duration={self.duration})"
+
+    def save(self):
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        session.add(self)
+        session.commit()
+        self.id = self.id
+
+    def fix_layout(self):
+        if self.layout_type == 1:
+            fixed_name = self.file_path.replace(".pdf", "_fixed.pdf")
+            pdf_helper.slice_pdf_pages(self.file_path, fixed_name)
+            return fixed_name
+        else:
+            return self.file_path
+
+    def save_lines(self):
+        pages = pdf_helper.pdf_to_text(self.fixed_layout)
+        pdf_lines = pd.DataFrame()
+        for page_no, page in enumerate(pages):
+            # pdf_helper.get_lines_from_text(page, page_no)
+            pdf_lines = pdf_lines.append(pdf_helper.get_lines_from_text(page, page_no))
+        pdf_lines['speaker'] = pdf_lines['speaker'].ffill()
+        pdf_lines['pdf_id'] = self.id
+        pdf_lines.to_sql('pdf_lines', engine, if_exists='append', index=False)
+
+
+class PDF_Line(Base):
+    __tablename__ = "pdf_lines"
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    page = Column(Integer)
+    line = Column(Integer)
+    pdf_id = Column(Integer)
+    text = Column(String)
+    speaker = Column(String)
+
+    def __init__(self, page, line, text, pdf_id, speaker):
+        self.id = None
+        self.page = page
+        self.line = line
+        self.text = text
+        self.pdf_id = pdf_id
+        self.speaker = speaker
 
     def save(self):
         Session = sessionmaker(bind=engine)

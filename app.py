@@ -1,3 +1,4 @@
+import TranscriptDB
 from audio_helper import Audio
 from TranscriptDB import AudioFile, PDF
 import argparse
@@ -16,9 +17,13 @@ if __name__ == "__main__":
         audio_file = AudioFile(file_path)
         print(audio_file.id)
 
-    pdf = PDF("multimedia/5912__0243_PM_greg_butch_discuss_docs_2012-05-09-154358.pdf", audio_file_id=3, layout_type=1)
+    # pdf = PDF("multimedia/5912__0243_PM_greg_butch_discuss_docs_2012-05-09-154358.pdf", audio_file_id=3, layout_type=1)
 
-    # audio = Audio('video.mp4', 0, 60)
+
+    # audio = Audio('multimedia/5912__0243_PM_greg_butch_discuss_docs_2012-05-09-154358.mp3')
     # audiofile = AudioFile(audio.audio_filepath)
+
+    snip = TranscriptDB.process_snippets()
+    snip.to_csv('snip.csv', index=False)
 
 

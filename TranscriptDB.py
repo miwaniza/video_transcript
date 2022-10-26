@@ -9,6 +9,9 @@ from audio_helper import Audio
 import assemblyai_helper as aai
 import pdf_helper
 from fuzzysearch import find_near_matches
+from thefuzz import fuzz
+from thefuzz import process
+import webvtt
 
 engine = create_engine(s.DATABASE.DB_URL)
 Base = declarative_base()
@@ -256,6 +259,22 @@ def get_pdf_lines_stamp(pdf_id):
     return pdf_lines
 
 
+def get_pdf_lines(pdf_id):
+    pdf_lines = pd.read_sql_table(
+        "pdf_lines",
+        con=engine
+    )
+    pdf_lines = pdf_lines[pdf_lines["pdf_id"] == pdf_id]
+    return pdf_lines
+
+def get_transcript(audio_file_id):
+    pdf_lines = pd.read_sql_table(
+        "transcript",
+        con=engine
+    )
+    pdf_lines = pdf_lines[pdf_lines["audio_file_id"] == audio_file_id]
+    return pdf_lines
+
 def get_snippets():
     snippets = pd.read_sql_table(
         "snippets",
@@ -266,10 +285,86 @@ def get_snippets():
 
 def process_snippets():
     snippets = get_snippets()
-    sn = snippets.apply(lambda x: fuzzy_search(x), axis=1)
+    sn = snippets.apply(lambda x: fuzzy_search_thefuzz(x), axis=1)
     return sn
     # for index, row in snippets.iterrows():
     #     fuzzy_search(row)
+
+
+class Match(object):
+    def __init__(self, obj):
+        self.start = obj.start
+        self.end = obj.end
+        self.dist = obj.dist
+        self.matched = obj.matched
+
+    def to_dict(self):
+        return {
+            'start': self.start,
+            'end': self.end,
+            'dist': self.dist,
+            'matched': self.matched,
+        }
+
+class SnippetTimings(object):
+    def __init__(self, obj):
+        self.page_start = obj.page_start
+        self.line_start = obj.line_start
+        self.page_end = obj.page_end
+        self.line_end = obj.line_end
+        self.audio_clip_id = obj.audio_clip_id
+        self.pdf_id = obj.pdf_id
+        self.start_stamp = self.page_start * 100 + self.line_start
+        self.end_stamp = self.page_end * 100 + self.line_end
+
+    def to_dict(self):
+        return {
+            'page_start': self.page_start,
+            'line_start': self.line_start,
+            'page_end': self.page_end,
+            'line_end': self.line_end,
+            'audio_clip_id': self.audio_clip_id,
+            'pdf_id': self.pdf_id,
+        }
+
+def fuzzy_search_thefuzz(snippet):
+    print(f"Processing snippet {snippet['index']}")
+    pdf_lines = get_pdf_lines(snippet.pdf_id)
+    transcripts = pd.read_sql_table('transcript', con=engine)
+
+    transcripts['group'] = transcripts.index // 3
+    transcripts = transcripts.groupby('group').agg({'start': 'first', 'end': 'last', 'text': 'sum'}).reset_index()
+
+    snip = SnippetTimings(snippet)
+
+    pdf_lines_f = pdf_lines[
+        (pdf_lines["page"] * 100 + pdf_lines["line"] >= snip.start_stamp)
+        & (pdf_lines["page"] * 100 + pdf_lines["line"] <= snip.end_stamp)]
+
+    pdf_lines_f['text'].replace(r"(?i)\[inaudible\]", '', regex=True, inplace=True)
+
+    start_search = " ".join(pdf_lines_f.iloc[0:3]["text"])
+    end_search = " ".join(pdf_lines_f.iloc[-3:]["text"])
+
+    transcripts['start_match'] = transcripts['text'].apply(lambda x: fuzz.partial_ratio(x, start_search))
+    transcripts['end_match'] = transcripts['text'].apply(lambda x: fuzz.partial_ratio(x, end_search))
+    transcripts_start = transcripts.iloc[transcripts['start_match'].idxmax()]
+    transcripts_end = transcripts.iloc[transcripts['end_match'].idxmax()]
+
+    snippet['start'] = transcripts_start['start']
+    snippet['end'] = transcripts_end['end']
+    return snippet
+
+
+def get_srt_lines(vtt):
+    df = pd.DataFrame(columns=['start', 'end', 'text'])
+    import io
+
+    for caption in webvtt.read_buffer(io.StringIO(vtt)):
+        df = df.append({'start': caption.start_in_seconds, 'end': caption.end_in_seconds, 'text': caption.text},
+                       ignore_index=True)
+
+    return df
 
 
 def fuzzy_search(snippet):
@@ -285,28 +380,26 @@ def fuzzy_search(snippet):
         (pdf_lines_stamp["page"] * 100 + pdf_lines_stamp["line"] >= page_start * 100 + line_start)
         & (pdf_lines_stamp["page"] * 100 + pdf_lines_stamp["line"] <= page_end * 100 + line_end)]
 
-    # pdf_line_start = pdf_lines["text_stamp"].iloc[0] if len(pdf_lines["text_stamp"].iloc[0])>10 else pdf_lines["text_stamp"].iloc[0] + pdf_lines["text_stamp"].iloc[1]
     if len(pdf_lines["text_stamp"].iloc[0]) > 13:
         pdf_line_start = pdf_lines["text_stamp"].iloc[0]
     else:
         pdf_line_start = pdf_lines["text_stamp"].iloc[0] + pdf_lines["text_stamp"].iloc[1]
 
-    if len(pdf_line_start)<14:
+    if len(pdf_line_start) < 14:
         distance_start = 5
-    elif len(pdf_line_start)<25:
+    elif len(pdf_line_start) < 25:
         distance_start = 7
     else:
         distance_start = 10
 
-
-    if len(pdf_lines["text_stamp"].iloc[-1])>13:
+    if len(pdf_lines["text_stamp"].iloc[-1]) > 13:
         pdf_line_end = pdf_lines["text_stamp"].iloc[-1]
     else:
         pdf_line_end = pdf_lines["text_stamp"].iloc[-2] + pdf_lines["text_stamp"].iloc[-1]
 
-    if len(pdf_line_end)<14:
+    if len(pdf_line_end) < 14:
         distance_end = 5
-    elif len(pdf_line_end)<25:
+    elif len(pdf_line_end) < 25:
         distance_end = 7
     else:
         distance_end = 10
@@ -314,26 +407,36 @@ def fuzzy_search(snippet):
     print(f"pdf_line_start: {pdf_line_start}")
     print(f"pdf_line_end: {pdf_line_end}")
 
-    fnm_start = find_near_matches(pdf_line_start, words_line, max_l_dist=distance_start)
-    fnm_end = find_near_matches(pdf_line_end, words_line, max_l_dist=distance_end)
+    fnm_start = pd.DataFrame(
+        Match(m).to_dict() for m in find_near_matches(pdf_line_start, words_line, max_l_dist=distance_start))
+    fnm_end = pd.DataFrame(
+        Match(m).to_dict() for m in find_near_matches(pdf_line_end, words_line, max_l_dist=distance_end))
 
     print(f"fnm_start: {fnm_start} {len(fnm_start)}")
     print(f"fnm_end: {fnm_end} {len(fnm_end)}")
 
     if len(fnm_start) > 0:
-        start = fnm_start[0].start
-        print(f"Start {start}")
-        words_start = words[words["text_offset"] >= start]
-        snippet["words_start"] = words_start["start"].values[0]
+        try:
+            start = fnm_start['start'].values[0]
+            print(f"Start {start}")
+            words_start = words[words["text_offset"] >= start]
+            snippet["words_start"] = words_start["start"].values[0]
+        except:
+            print(f"Start not found")
+            snippet["words_start"] = None
     else:
         snippet["words_start"] = None
         print(f"Snippet start {snippet['index']} not found")
 
     if len(fnm_end) > 0:
-        end = fnm_end[0].end
-        print(f"End: {end}")
-        words_end = words[words["text_offset"] <= end]
-        snippet["words_end"] = words_end["end"].values[0]
+        try:
+            end = fnm_end[fnm_end["end"] >= fnm_start['start'].values[0]]['end'].values[0]
+            print(f"End: {end}")
+            words_end = words[words["text_offset"] <= end]
+            snippet["words_end"] = words_end["end"].values[-1]
+        except:
+            snippet["words_end"] = None
+            print(f"Snippet end {snippet['index']} not found")
     else:
         snippet["words_end"] = None
         print(f"Snippet end {snippet['index']} not found")

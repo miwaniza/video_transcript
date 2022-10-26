@@ -3,6 +3,7 @@ import time
 import requests
 
 import settings as s
+import io
 
 
 class AssemblyAI:
@@ -15,7 +16,7 @@ class AssemblyAI:
         self.filepath = filepath
         self.file_url = self.upload_file()
         self.job_id = self.set_transcribe_job()
-        # self.srt = self.get_transcript_srt()
+        self.srt = self.get_transcript_srt()
         self.transcript = self.get_transcript()
         self.words = self.transcript['words']
 
@@ -38,9 +39,15 @@ class AssemblyAI:
             response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}/{s.ASSEMBLYAI.subtitles_format}",
                                     headers=self.headers)
 
-            with open(f"{self.job_id}.{s.ASSEMBLYAI.subtitles_format}", 'w') as f:
-                f.write(response.text)
-            return response.text
+            df = pd.DataFrame(columns=['start', 'end', 'text', 'audio_file_id'])
+
+            for caption in webvtt.read_buffer(io.StringIO(response.text)):
+                df = df.append({'start': caption.start_in_seconds, 'end': caption.end_in_seconds, 'text': caption.text,
+                                'audio_file_id': self.audio_file_id},
+                               ignore_index=True)
+
+            return df
+
 
     def get_transcript(self):
         if self.poll_status() == 'completed':

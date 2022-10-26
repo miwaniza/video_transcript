@@ -4,3 +4,6 @@ ffmpeg-python
 sqlalchemy
 pdftotext
 pdfrw
+python-Levenshtein
+webvtt-py
+thefuzzs

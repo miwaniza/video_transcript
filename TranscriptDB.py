@@ -267,6 +267,7 @@ def get_pdf_lines(pdf_id):
     pdf_lines = pdf_lines[pdf_lines["pdf_id"] == pdf_id]
     return pdf_lines
 
+
 def get_transcript(audio_file_id):
     pdf_lines = pd.read_sql_table(
         "transcript",
@@ -274,6 +275,7 @@ def get_transcript(audio_file_id):
     )
     pdf_lines = pdf_lines[pdf_lines["audio_file_id"] == audio_file_id]
     return pdf_lines
+
 
 def get_snippets():
     snippets = pd.read_sql_table(
@@ -306,6 +308,7 @@ class Match(object):
             'matched': self.matched,
         }
 
+
 class SnippetTimings(object):
     def __init__(self, obj):
         self.page_start = obj.page_start
@@ -327,6 +330,7 @@ class SnippetTimings(object):
             'pdf_id': self.pdf_id,
         }
 
+
 def fuzzy_search_thefuzz(snippet):
     print(f"Processing snippet {snippet['index']}")
     pdf_lines = get_pdf_lines(snippet.pdf_id)
@@ -343,16 +347,24 @@ def fuzzy_search_thefuzz(snippet):
 
     pdf_lines_f['text'].replace(r"(?i)\[inaudible\]", '', regex=True, inplace=True)
 
-    start_search = " ".join(pdf_lines_f.iloc[0:3]["text"])
-    end_search = " ".join(pdf_lines_f.iloc[-3:]["text"])
+    start_chunk = 1
+    end_chunk = 1
+
+    while len(pdf_lines_f["text"].iloc[:start_chunk].agg("sum")) < 30:
+        start_chunk = start_chunk + 1
+    while len(pdf_lines_f["text"].iloc[-end_chunk:].agg("sum")) < 30:
+        end_chunk = end_chunk + 1
+
+    start_search = " ".join(pdf_lines_f.iloc[:start_chunk]["text"])
+    end_search = " ".join(pdf_lines_f.iloc[-end_chunk:]["text"])
 
     transcripts['start_match'] = transcripts['text'].apply(lambda x: fuzz.partial_ratio(x, start_search))
     transcripts['end_match'] = transcripts['text'].apply(lambda x: fuzz.partial_ratio(x, end_search))
-    transcripts_start = transcripts.iloc[transcripts['start_match'].idxmax()]
-    transcripts_end = transcripts.iloc[transcripts['end_match'].idxmax()]
+    transcripts_start = transcripts.nlargest(3, "start_match")
+    snippet['start'] = transcripts_start['start'].iloc[0]
 
-    snippet['start'] = transcripts_start['start']
-    snippet['end'] = transcripts_end['end']
+    transcripts_end = transcripts[transcripts["start"] > transcripts_start['start'].iloc[0]].nlargest(1, "end_match")
+    snippet['end'] = transcripts_end['end'].iloc[0]
     return snippet
 
 

@@ -27,3 +27,8 @@ class SCRIPT:
     TAGS = ["[inaudible]", "[music]", "[applause]", "[laughter]", "[crosstalk]", "(phon.)",
             "[Background conversation.]", "(Commencement of electronic recording.)",
             "(Conclusion of electronic recording.)"]
+
+
+class CONFIG:
+    root_dir = "/opt/videos/2004prod"
+    clips_dir = os.path.join(root_dir, "clips")

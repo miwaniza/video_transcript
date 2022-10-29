@@ -8,9 +8,7 @@ import settings as s
 from audio_helper import Audio
 import assemblyai_helper as aai
 import pdf_helper
-from fuzzysearch import find_near_matches
-from thefuzz import fuzz
-from thefuzz import process
+from thefuzz import fuzz, process
 import webvtt
 
 engine = create_engine(s.DATABASE.DB_URL)
@@ -127,12 +125,13 @@ class PDF(Base):
     text = Column(String)
     audio_file_id = Column(Integer)
 
-    def __init__(self, file_path, audio_file_id, layout_type):
+    def __init__(self, file_path, layout_type, output_path, audio_file_id=None):
         self.id = None
         self.audio_file_id = audio_file_id
         self.file_path = file_path
         self.layout_type = layout_type
         self.fixed_layout = self.fix_layout()
+        self.output_path = output_path
         self.save()
         self.save_lines()
 
@@ -147,6 +146,7 @@ class PDF(Base):
         self.id = self.id
 
     def fix_layout(self):
+        # 2 by 2 pages on one page
         if self.layout_type == 1:
             fixed_name = self.file_path.replace(".pdf", "_fixed.pdf")
             pdf_helper.slice_pdf_pages(self.file_path, fixed_name)
@@ -162,6 +162,8 @@ class PDF(Base):
             pdf_lines = pdf_lines.append(lines)
         pdf_lines['speaker'] = pdf_lines['speaker'].ffill()
         pdf_lines['pdf_id'] = self.id
+        if self.output_path:
+            pdf_lines.to_csv(self.output_path, index=False)
         pdf_lines.to_sql('pdf_lines', engine, if_exists='append', index=False)
 
 

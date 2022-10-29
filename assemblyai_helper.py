@@ -1,6 +1,8 @@
 import time
 
+import pandas as pd
 import requests
+import webvtt
 
 import settings as s
 import io
@@ -39,15 +41,18 @@ class AssemblyAI:
             response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}/{s.ASSEMBLYAI.subtitles_format}",
                                     headers=self.headers)
 
+            # save response to file
+            with open(f"{s.CONFIG.root}/{s.CONFIG.folders['srt']}/{self.job_id}.srt", "w") as f:
+                f.write(response.text)
+            print(f"SRT saved to:\n{s.CONFIG.root}/{s.CONFIG.folders['srt']}/{self.job_id}.srt")
+
             df = pd.DataFrame(columns=['start', 'end', 'text', 'audio_file_id'])
 
             for caption in webvtt.read_buffer(io.StringIO(response.text)):
                 df = df.append({'start': caption.start_in_seconds, 'end': caption.end_in_seconds, 'text': caption.text,
                                 'audio_file_id': self.audio_file_id},
                                ignore_index=True)
-
             return df
-
 
     def get_transcript(self):
         if self.poll_status() == 'completed':

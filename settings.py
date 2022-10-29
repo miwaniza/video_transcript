@@ -1,6 +1,34 @@
 import os
 
 
+class CONFIG:
+    root = "/opt/videos/2004prod"
+    folders = {
+        "audio": "audio",
+        "clips": "clips",
+        "db": "db",
+        "pdf": "pdf",
+        "input": "input",
+        "srt": "srt",
+        "text": "text"
+    }
+
+
+def init_folders():
+    create_folder(CONFIG.root)
+
+    for folder in CONFIG.folders.values():
+        path = os.path.join(CONFIG.root, folder)
+        create_folder(path)
+
+
+def create_folder(path):
+    os.makedirs(path) if not os.path.exists(path) else None
+
+
+init_folders()
+
+
 class ASSEMBLYAI:
     api_key = os.environ.get('ASSEMBLYAI_API_KEY')
     api_url = "https://api.assemblyai.com/v2"
@@ -11,8 +39,9 @@ class ASSEMBLYAI:
 
 
 class DATABASE:
-    __uri = os.environ["DATABASE_URL"]
-    DB_URL = __uri.replace("postgres://", "postgresql://", 1) if __uri.startswith("postgres://") else __uri
+    DB_URL = f"sqlite:///{CONFIG.root}/{CONFIG.folders['db']}/transcript.db"
+    # __uri = os.environ["DATABASE_URL"]
+    # DB_URL = __uri.replace("postgres://", "postgresql://", 1) if __uri.startswith("postgres://") else __uri
 
 
 class AUDIO:
@@ -27,8 +56,3 @@ class SCRIPT:
     TAGS = ["[inaudible]", "[music]", "[applause]", "[laughter]", "[crosstalk]", "(phon.)",
             "[Background conversation.]", "(Commencement of electronic recording.)",
             "(Conclusion of electronic recording.)"]
-
-
-class CONFIG:
-    root_dir = "/opt/videos/2004prod"
-    clips_dir = os.path.join(root_dir, "clips")

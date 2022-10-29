@@ -1,45 +1,64 @@
-import TranscriptDB
-from audio_helper import Audio
-from TranscriptDB import AudioFile, PDF
 import argparse
+import os
 
 import settings as s
-# from threading import Thread
-
-def main(args):
-    if args.audio:
-        audio = Audio(args.audio)
-
-    if args.pdf:
-        pdf = PDF(args.pdf)
-
-    if args.transcript:
+from TranscriptDB import PDF
+from audio_helper import Audio
 
 
+class Caller:
+    def __init__(self) -> None:
+        pass
+
+    def process_audio(self, input_file, output_file):
+        Audio(input_file, os.path.join(s.CONFIG.root, s.CONFIG.folders["audio"], output_file))
+
+    def process_pdf(self, input_file, output_file, layout):
+        PDF(input_file, layout, os.path.join(s.CONFIG.root, s.CONFIG.folders["pdf"], output_file))
+
+    def process_aai(self, input_file, output_file):
+        pass
+
+    def process_lines(self):
+        pass
+
+
+def main():
+    parse_args()
+
+
+def parse_args():
+    caller = Caller()
+
+    parser = argparse.ArgumentParser(description='Process transcriptions.')
+    subparsers = parser.add_subparsers(dest='command', help='Commands to run', required=True)
+
+    parser_audio = subparsers.add_parser('audio', help='Process audio file')
+    parser_audio.add_argument('i', help='Input file')
+    parser_audio.add_argument('o', help='Output filename')
+    parser_audio.set_defaults(func=caller.process_audio)
+
+    parser_pdf = subparsers.add_parser('pdf', help='Extract text from PDF file')
+    parser_pdf.add_argument('i', help='Input file')
+    parser_pdf.add_argument('o', help='Output filename')
+    parser_pdf.add_argument('l', help='Layout')
+    parser_pdf.set_defaults(func=caller.process_pdf)
+
+    parser_aai = subparsers.add_parser('aai', help='Process audio file with AssemblyAI')
+    parser_aai.add_argument('i', help='Input file')
+    parser_aai.add_argument('o', help='Output filename')
+    parser_aai.set_defaults(func=caller.process_aai)
+
+    process_lines = subparsers.add_parser('lines', help='Merge lines in transcript and recognized text')
+    process_lines.set_defaults(func=caller.process_lines)
+
+    args = parser.parse_args()
+    args_ = vars(args).copy()
+    args_.pop('command', None)
+    args_.pop('func', None)
+    args.func(**args_)
 
 
 if __name__ == "__main__":
-    # init_folders()
-    # if False:
-    parser = argparse.ArgumentParser(description='Process transcriptions.')
-
-    parser.add_argument("-a", "--audio", help="Path to audio file")
-    parser.add_argument("-p", "--pdf", help="Path to pdf file")
-    parser.add_argument("-s", "--srt", help="Path to srt file in VTT format")
-    parser.add_argument("-t", "--text", help="Path to text file")
-    args = parser.parse_args()
-    main(args)
-    # file_path = args.file_path
-    # audio_file = AudioFile(file_path)
-    # print(audio_file.id)
-
-    # pdf = PDF("multimedia/5912__0243_PM_greg_butch_discuss_docs_2012-05-09-154358.pdf", audio_file_id=3, layout_type=1)
-
-
-    # audio = Audio('multimedia/5912__0243_PM_greg_butch_discuss_docs_2012-05-09-154358.mp3')
-    # audiofile = AudioFile(audio.audio_filepath)
-
-    snip = TranscriptDB.process_snippets()
-    snip.to_csv('snip.csv', index=False)
-
+    main()
 

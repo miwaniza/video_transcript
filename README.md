@@ -76,7 +76,18 @@ python3 app.py pdf /path/to/pdf/file.pdf name_of_output_file.txt 0
 ```
 
 ### AssemblyAI
+```bash
+usage: app.py aai [-h] i o
 
+positional arguments:
+  i           Input file. Must be in audio file format.
+  o           Output filename. Output will be saved in VTT and CSV format in
+              SRT folder.
+```
+Run the following command to transcript audio file with AssemblyAI in VTT and CSV format:
 
+```bash
+python3 app.py aii /path/to/audio/file.wav name_of_output_file
+```
 
 

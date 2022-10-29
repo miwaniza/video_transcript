@@ -35,7 +35,7 @@ class ASSEMBLYAI:
     polling_interval = 10
     chunk_size = 1024 * 1024 * 5
     audio_format = "wav"
-    subtitles_format = "srt"
+    subtitles_format = "vtt"
 
 
 class DATABASE:

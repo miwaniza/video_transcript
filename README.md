@@ -87,7 +87,7 @@ positional arguments:
 Run the following command to transcript audio file with AssemblyAI in VTT and CSV format:
 
 ```bash
-python3 app.py aii /path/to/audio/file.wav name_of_output_file
+python3 app.py aai /path/to/audio/file.wav name_of_output_file
 ```
 
 

@@ -1,5 +1,4 @@
 import datetime
-
 import pandas as pd
 from sqlalchemy import Column, Integer, DateTime, String, Float
 from sqlalchemy import create_engine

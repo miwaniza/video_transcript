@@ -19,7 +19,14 @@ The app is using a simple architecture with 3 main components:
 - `requirements.txt` - the requirements file to install the dependencies
 
 ## How to install app
-
+Run the following command to install the app:
+```bash
+make init
+make install
+```
 
 ## How to run the app
+Run the following command to extract audio from the video :
+```bash
 python3 app.py audio /path/to/video/file.mp4 name_of_output_file.wav
+```

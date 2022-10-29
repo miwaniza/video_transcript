@@ -36,7 +36,7 @@ init:
 
 install: ## Installs development requirments
 install:
-	python -m pip install --upgrade pip
+	python3 -m pip install --upgrade pip
 
 
 clean: ## Remove build and cache files

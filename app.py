@@ -10,13 +10,13 @@ class Caller:
     def __init__(self) -> None:
         pass
 
-    def process_audio(self, input_file, output_file):
-        Audio(input_file, os.path.join(s.CONFIG.root, s.CONFIG.folders["audio"], output_file))
+    def process_audio(self, i, o):
+        Audio(i, os.path.join(s.CONFIG.root, s.CONFIG.folders["audio"], o))
 
-    def process_pdf(self, input_file, output_file, layout):
+    def process_pdf(self, i, o, l):
         PDF(input_file, layout, os.path.join(s.CONFIG.root, s.CONFIG.folders["pdf"], output_file))
 
-    def process_aai(self, input_file, output_file):
+    def process_aai(self, i, o):
         pass
 
     def process_lines(self):

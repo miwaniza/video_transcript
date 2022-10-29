@@ -158,11 +158,13 @@ class PDF(Base):
         pdf_lines = pd.DataFrame()
         for page_no, page in enumerate(pages):
             lines = pdf_helper.get_lines_from_text(page, page_no + 1)
-            pdf_lines = pdf_lines.append(lines)
+            pdf_lines = pd.concat([pdf_lines, lines], ignore_index=True)
+            # pdf_lines = pdf_lines.concat(lines)
         pdf_lines['speaker'] = pdf_lines['speaker'].ffill()
         pdf_lines['pdf_id'] = self.id
+        pdf_lines['text'] = pdf_lines['text'].str.rstrip()
         if self.output_path:
-            pdf_lines.to_csv(self.output_path, index=False)
+            pdf_lines.to_csv(self.output_path, index=False, header=True)
         pdf_lines.to_sql('pdf_lines', engine, if_exists='append', index=False)
 
 

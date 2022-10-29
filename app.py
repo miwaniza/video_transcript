@@ -13,8 +13,8 @@ class Caller:
     def process_audio(self, i, o):
         Audio(i, os.path.join(s.CONFIG.root, s.CONFIG.folders["audio"], o))
 
-    def process_pdf(self, i, o, l):
-        PDF(input_file, layout, os.path.join(s.CONFIG.root, s.CONFIG.folders["pdf"], output_file))
+    def process_pdf(self, i, l, o):
+        PDF(i, l, os.path.join(s.CONFIG.root, s.CONFIG.folders["pdf"], o))
 
     def process_aai(self, i, o):
         pass
@@ -40,8 +40,8 @@ def parse_args():
 
     parser_pdf = subparsers.add_parser('pdf', help='Extract text from PDF file')
     parser_pdf.add_argument('i', help='Input file')
+    parser_pdf.add_argument('l', type=int, choices=range(0, 2), help='Layouts: 0 - single page, 1 - 2 by 2 pages on page')
     parser_pdf.add_argument('o', help='Output filename')
-    parser_pdf.add_argument('l', help='Layout')
     parser_pdf.set_defaults(func=caller.process_pdf)
 
     parser_aai = subparsers.add_parser('aai', help='Process audio file with AssemblyAI')
@@ -61,4 +61,3 @@ def parse_args():
 
 if __name__ == "__main__":
     main()
-

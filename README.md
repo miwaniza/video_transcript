@@ -26,7 +26,57 @@ make install
 ```
 
 ## How to run the app
-Run the following command to extract audio from the video :
+### Common usage
+Run the following command to get the help:
+```bash
+python3 app.py -h
+```
+Output:
+```bash
+usage: app.py [-h] {audio,pdf,aai,lines} ...
+
+Process transcriptions.
+
+positional arguments:
+  {audio,pdf,aai,lines}
+                        Commands to run
+    audio               Process audio file
+    pdf                 Extract text from PDF file
+    aai                 Process audio file with AssemblyAI
+    lines               Merge lines in transcript and recognized text
+```
+
+
+### Audio
+```bash
+usage: app.py audio [-h] i o
+
+positional arguments:
+  i           Input file
+  o           Output filename
+```
+Run the following command to extract audio from the video:
 ```bash
 python3 app.py audio /path/to/video/file.mp4 name_of_output_file.wav
 ```
+### PDF
+```bash
+usage: app.py pdf [-h] i {0,1} o
+
+positional arguments:
+  i           Input file
+  {0,1}       Layouts: 0 - single page, 1 - 2 by 2 pages on page
+  o           Output filename
+  ```
+
+Run the following command to extract lines from the PDF:
+
+```bash
+python3 app.py pdf /path/to/pdf/file.pdf name_of_output_file.txt 0
+```
+
+### AssemblyAI
+
+
+
+

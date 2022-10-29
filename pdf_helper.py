@@ -27,7 +27,8 @@ def get_lines_from_text(text_str, page_no):
     matches = re.finditer(regex, text_str, re.MULTILINE)
     lines = pd.DataFrame()
     for matchNum, match in enumerate(matches, start=1):
-        lines = lines.append(match.groupdict(), ignore_index=True)
+        mat = pd.DataFrame([match.groupdict()])
+        lines = pd.concat([lines, mat], ignore_index=True)
     lines['page'] = page_no
     return lines
 

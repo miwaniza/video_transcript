@@ -90,4 +90,32 @@ Run the following command to transcript audio file with AssemblyAI in VTT and CS
 python3 app.py aai /path/to/audio/file.wav name_of_output_file
 ```
 
+### Lookup
+```bash
+usage: app.py lookup [-h] aud man lookup out
 
+positional arguments:
+  aud         Audio transcription file. CSV file created by AssemblyAI.
+  man         Manual transcription file. CSV court transcript from PDF.
+  lookup      Snippets CSV file.
+  out         Output filename to save snippets with timings.
+```
+Prepare lookup file with the following format in CSV:
+```csv
+description,page_start,line_start,page_end,line_end
+Lorem Ipsum,6,11,9,1
+dolor sit,9,6,12,2
+```
+The meaning of snippet file:
+
+| description | page_start | line_start | page_end | line_end |
+|-------------|------------|------------|----------|----------|
+| Lorem ipsum | 6          | 11         | 9        | 1        |
+| dolor sit   | 9          | 6          | 12       | 2        |
+
+
+Run the following command to lookup the lines from lookup file using transcription in the audio transcription:
+
+```bash
+python3 app.py lookup /path/to/audio/transcription.csv path/to/manual/transcription.csv path/to/snippets.csv name_of_output_file.csv
+```

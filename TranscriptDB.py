@@ -168,7 +168,7 @@ class PDF(Base):
         pdf_lines.to_sql('pdf_lines', engine, if_exists='append', index=False)
 
 
-class PDF_Line(Base):
+class PdfLine(Base):
     __tablename__ = "pdf_lines"
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -225,43 +225,6 @@ class Snippets(Base):
         self.id = self.id
 
 
-def get_words_stamp(audio_file_id):
-    words = pd.read_sql_table(
-        "words",
-        con=engine
-    )
-    words = words[words['audio_clip_id'] == audio_file_id]
-    words["text_stamp"] = (words["text"].str.replace(r'[^a-zA-Z0-9]+', '', regex=True)).str.lower()
-    words["text_stamp_length"] = words["text_stamp"].apply(len)
-    words["text_offset"] = words["text_stamp_length"].cumsum()
-    words_line = "".join(words["text_stamp"])
-    return words, words_line
-
-
-def remove_caps(text):
-    text.replace(r"[A-Z]{3,}", '', regex=True)
-
-
-def remove_tags(text):
-    tags = s.SCRIPT.TAGS
-    for tag in tags:
-        text = str.lower(text).replace(str.lower(tag), '')
-    return text
-
-
-def get_pdf_lines_stamp(pdf_id):
-    pdf_lines = pd.read_sql_table(
-        "pdf_lines",
-        con=engine
-    )
-    pdf_lines = pdf_lines[pdf_lines["pdf_id"] == pdf_id]
-
-    pdf_lines["text_stamp"] = (pdf_lines["text"].str.replace(r'[A-Z]{3,}', '', regex=True))
-    pdf_lines['text_stamp'] = pdf_lines['text_stamp'].apply(lambda x: remove_tags(x))
-    pdf_lines["text_stamp"] = (pdf_lines["text_stamp"].str.replace(r'[^a-zA-Z]+', '', regex=True)).str.lower()
-    return pdf_lines
-
-
 def get_pdf_lines(pdf_id):
     pdf_lines = pd.read_sql_table(
         "pdf_lines",
@@ -280,7 +243,7 @@ def get_transcript(audio_file_id):
     return pdf_lines
 
 
-def get_snippets():
+def get_snippets_db():
     snippets = pd.read_sql_table(
         "snippets",
         con=engine
@@ -288,12 +251,52 @@ def get_snippets():
     return snippets
 
 
-def process_snippets():
-    snippets = get_snippets()
-    sn = snippets.apply(lambda x: fuzzy_search_thefuzz(x), axis=1)
+def process_snippets_db():
+    snippets = get_snippets_db()
+    sn = pd.DataFrame()
+    transcripts = pd.read_sql_table('transcript', con=engine)
+    transcripts['group'] = transcripts.index // 3
+    transcripts = transcripts.groupby('group').agg({'start': 'first', 'end': 'last', 'text': 'sum'}).reset_index()
+
+    # sn = snippets.apply(lambda x: fuzzy_search_thefuzz(x), axis=1)
+    for index, snippet in snippets.iterrows():
+        pdf_lines = get_pdf_lines(snippet.pdf_id)
+        sn = pd.concat([sn, fuzzy_search_thefuzz(snippet, pdf_lines, transcripts)], ignore_index=True)
     return sn
-    # for index, row in snippets.iterrows():
-    #     fuzzy_search(row)
+
+
+def get_snippets_file(snippets_file):
+    snippets = pd.read_csv(snippets_file)
+    return snippets
+
+
+def get_transcripts_file(transcripts_file):
+    transcripts = pd.read_csv(transcripts_file)
+    transcripts['group'] = transcripts.index // 3
+    transcripts = transcripts.groupby('group').agg({'start': 'first', 'end': 'last', 'text': 'sum'}).reset_index()
+    return transcripts
+
+
+def get_pdf_lines_file(pdf_lines_file):
+    pdf_lines = pd.read_csv(pdf_lines_file)
+    return pdf_lines
+
+
+def process_snippets_files(snippets_file, transcripts_file, pdf_lines_file):
+    snippets = get_snippets_file(snippets_file)
+    transcripts = get_transcripts_file(transcripts_file)
+    pdf_lines = get_pdf_lines_file(pdf_lines_file)
+    snippets["start_stamp"] = snippets["page_start"] * 100 + snippets["line_start"]
+    snippets["end_stamp"] = snippets["page_end"] * 100 + snippets["line_end"]
+
+    # snippets_timed = pd.DataFrame()
+    snippets_timed = snippets.apply(lambda x: fuzzy_search_thefuzz(x, pdf_lines, transcripts), axis=1)
+
+    # for index, snippet in snippets.iterrows():
+    #     snippets_timed = pd.concat([snippets_timed,
+    #                                 fuzzy_search_thefuzz(snippet, pdf_lines, transcripts)],
+    #                                ignore_index=True)
+    return snippets_timed
 
 
 class Match(object):
@@ -318,8 +321,8 @@ class SnippetTimings(object):
         self.line_start = obj.line_start
         self.page_end = obj.page_end
         self.line_end = obj.line_end
-        self.audio_clip_id = obj.audio_clip_id
-        self.pdf_id = obj.pdf_id
+        self.audio_clip_id = obj.audio_clip_id if hasattr(obj, "audio_clip_id") else None
+        self.pdf_id = obj.pdf_id if hasattr(obj, 'pdf_id') else None
         self.start_stamp = self.page_start * 100 + self.line_start
         self.end_stamp = self.page_end * 100 + self.line_end
 
@@ -334,21 +337,12 @@ class SnippetTimings(object):
         }
 
 
-def fuzzy_search_thefuzz(snippet):
-    print(f"Processing snippet {snippet['index']}")
-    pdf_lines = get_pdf_lines(snippet.pdf_id)
-    transcripts = pd.read_sql_table('transcript', con=engine)
+def fuzzy_search_thefuzz(snippet, pdf_lines, transcripts):
+    pdf_lines_f = pdf_lines.loc[
+        (pdf_lines["page"] * 100 + pdf_lines["line"] >= snippet["start_stamp"])
+        & (pdf_lines["page"] * 100 + pdf_lines["line"] <= snippet["end_stamp"])]
 
-    transcripts['group'] = transcripts.index // 3
-    transcripts = transcripts.groupby('group').agg({'start': 'first', 'end': 'last', 'text': 'sum'}).reset_index()
-
-    snip = SnippetTimings(snippet)
-
-    pdf_lines_f = pdf_lines[
-        (pdf_lines["page"] * 100 + pdf_lines["line"] >= snip.start_stamp)
-        & (pdf_lines["page"] * 100 + pdf_lines["line"] <= snip.end_stamp)]
-
-    pdf_lines_f['text'].replace(r"(?i)\[inaudible\]", '', regex=True, inplace=True)
+    # pdf_lines_f['text'].replace(r"(?i)\[inaudible\]", '', regex=True, inplace=True)
 
     start_chunk = 1
     end_chunk = 1
@@ -369,17 +363,6 @@ def fuzzy_search_thefuzz(snippet):
     transcripts_end = transcripts[transcripts["start"] > transcripts_start['start'].iloc[0]].nlargest(1, "end_match")
     snippet['end'] = transcripts_end['end'].iloc[0]
     return snippet
-
-
-def get_srt_lines(vtt):
-    df = pd.DataFrame(columns=['start', 'end', 'text'])
-    import io
-
-    for caption in webvtt.read_buffer(io.StringIO(vtt)):
-        df = df.append({'start': caption.start_in_seconds, 'end': caption.end_in_seconds, 'text': caption.text},
-                       ignore_index=True)
-
-    return df
 
 
 Base.metadata.create_all(engine)

@@ -4,11 +4,12 @@ import os
 import assemblyai_helper as aai
 import settings as s
 import TranscriptDB as tdb
-from audio_helper import Audio
+import media_helper as mh
+from media_helper import Media
 
 
 def process_audio(i, o):
-    Audio(i, os.path.join(s.CONFIG.root, s.CONFIG.folders["audio"], o))
+    Media(i, os.path.join(s.CONFIG.root, s.CONFIG.folders["audio"], o))
 
 
 def process_pdf(i, l, o):
@@ -22,14 +23,14 @@ def process_aai(i, o):
 def process_lookup(aud, man, lookup, out):
     snippets_timed = tdb.process_snippets_files(lookup, aud, man)
     snippets_timed.to_csv(out, index=False)
-    pass
 
-def process_clips(i, s, o):
-    pass
+
+def process_clips(i, sn):
+    snippets = tdb.read_snippets(sn)
+    mh.get_clips(i, snippets)
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser(description='Process transcriptions.')
     subparsers = parser.add_subparsers(dest='command', help='Commands to run', required=True)
 
@@ -59,8 +60,7 @@ def parse_args():
 
     parser_clips = subparsers.add_parser('clips', help='Process clips')
     parser_clips.add_argument('i', help='Input audio/video file')
-    parser_clips.add_argument('s', help='Timed snippets file')
-    parser_clips.add_argument('o', help='Output filename')
+    parser_clips.add_argument('sn', help='Timed snippets file. CSV file created by lookup command.')
     parser_clips.set_defaults(func=process_clips)
 
     args = parser.parse_args()
@@ -68,4 +68,3 @@ def parse_args():
     args_.pop('command', None)
     args_.pop('func', None)
     args.func(**args_)
-

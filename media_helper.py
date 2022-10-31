@@ -1,9 +1,11 @@
 import ffmpeg
 import shutil
 import settings as s
+import os
+import re
 
 
-class Audio:
+class Media:
     def __init__(self, source, target, start_time=None, end_time=None):
         self.source = source
         self.format = source.split(".")[-1]
@@ -28,3 +30,15 @@ class Audio:
         ffmpeg.run(stream, overwrite_output=True)
         print(f"Audio file saved to {self.target}")
 
+
+def get_clips(source, snippets):
+    extension = os.path.splitext(source)[1]
+    initial_filename = os.path.splitext(source)[0]
+    for i, row in snippets.iterrows():
+        position = f"{row['start_page']}:{row['start_line']}-{row['end_page']}:{row['end_line']}"
+        filename = f"{row['short_name']}_{row['descriptive_name']}_{row['original_date']}_{position}_{initial_filename}{extension}"
+        filename = re.sub(r'\s+', '_', filename)
+        stream = ffmpeg.input(source, ss=row['start_time'], to=row['end_time'])
+        stream = ffmpeg.output(stream, os.path.join(s.CONFIG.root, s.CONFIG.folders["clips"], filename))
+        ffmpeg.run(stream, overwrite_output=True)
+        print(f"Clip saved to {filename}")

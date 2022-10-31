@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, DateTime, String, Float
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import settings as s
-from audio_helper import Audio
+from media_helper import Media
 import assemblyai_helper as aai
 import pdf_helper
 from thefuzz import fuzz, process
@@ -24,7 +24,7 @@ class AudioFile(Base):
     def __init__(self, file_path):
         self.id = None
         self.file_path = file_path
-        self.duration = Audio(file_path).duration
+        self.duration = Media(file_path).duration
         self.save()
         audio_clip = AudioClip(self.file_path, 0, self.duration, self.id)
         print(self.id)

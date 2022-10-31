@@ -102,20 +102,52 @@ positional arguments:
 ```
 Prepare lookup file with the following format in CSV:
 ```csv
-description,page_start,line_start,page_end,line_end
-Lorem Ipsum,6,11,9,1
-dolor sit,9,6,12,2
+description,page_start,line_start,page_end,line_end,short_name,descriptive_name,original_date,actual_filename
+Lorem Ipsum,6,11,9,1,Deposition Gregory Faia 001 (DGF001),what was the plan,202013,Faia-Gregory-031220
+dolor sit,9,6,12,2,Deposition Gregory Faia 001 (DGF001),what was the plan,202013,Faia-Gregory-031220
 ```
 The meaning of snippet file:
 
-| description | page_start | line_start | page_end | line_end |
-|-------------|------------|------------|----------|----------|
-| Lorem ipsum | 6          | 11         | 9        | 1        |
-| dolor sit   | 9          | 6          | 12       | 2        |
+| description | page_start | line_start | page_end | line_end | short_name                     | descriptive_name  | original_date | actual_filename |
+|-------------|------------|------------|----------|----------|--------------------------------------|-------------------|---------------|-----------------|
+| Lorem ipsum | 6          | 11         | 9        | 1        | Deposition Gregory Faia 001 (DGF001) | what was the plan | 202013        | Faia-Gregory-031220                |
+| dolor sit   | 9          | 6          | 12       | 2        | Deposition Gregory Faia 001 (DGF002) | what went wrong   | 202013        | Faia-Gregory-031220                |
 
 
 Run the following command to lookup the lines from lookup file using transcription in the audio transcription:
 
 ```bash
 python3 app.py lookup /path/to/audio/transcription.csv path/to/manual/transcription.csv path/to/snippets.csv name_of_output_file.csv
+```
+
+### Slicing clips
+
+```bash
+usage: app.py clips [-h] i sn
+
+positional arguments:
+  i           Input audio/video file
+  sn          Timed snippets file. CSV file created by lookup command.
+```
+
+Naming scheme:
+use _ for delimiter and - for multi-word fields
+
+| part | sample |
+|------|--------|
+| [short name / index] | Deposition Gregory Faia 001 (DGF001) |
+| [descriptive name] | what-was-the-plan |
+| [date of original video] | 202013 |
+| [start page #:line # to end page #:line #] | 179:17-180:1 |
+| [actual file name] | Faia-Gregory-031220.mp4 |
+
+
+
+Clip file name:
+DGF001_what-was-the-plan_202013_179:17-180:1_Faia-Gregory-031220.mp4
+
+Run the following command to slice the clips from the audio/video file using snippets file as a guide:
+
+```bash
+python3 app.py clips /path/to/audio/video/file.wav path/to/snippets.csv
 ```

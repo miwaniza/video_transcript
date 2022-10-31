@@ -1,2 +1,3 @@
-description,page_start,line_start,page_end,line_end
-Lorem Ipsum,6,11,9,1
+description,page_start,line_start,page_end,line_end,short_name,descriptive_name,original_date,actual_filename
+Lorem Ipsum,6,11,9,1,Deposition Gregory Faia 001 (DGF001),what was the plan,202013,Faia-Gregory-031220
+dolor sit,9,6,12,2,Deposition Gregory Faia 001 (DGF001),what was the plan,202013,Faia-Gregory-031220

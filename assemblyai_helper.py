@@ -89,6 +89,7 @@ class AssemblyAI:
         # print time from start in hh:mm:ss
         while status not in ['completed', 'error']:
             time.sleep(s.ASSEMBLYAI.polling_interval)
+            print(f"Sleeping for {s.ASSEMBLYAI.polling_interval} seconds...")
             status = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
                                   headers=self.headers).json()['status']
         if status == 'error':

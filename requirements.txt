@@ -7,3 +7,4 @@ pdfrw
 python-Levenshtein
 webvtt-py
 thefuzz
+validators

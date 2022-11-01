@@ -44,10 +44,15 @@ class AssemblyAI:
                                  headers=self.headers,
                                  json={"audio_url": self.file_url})
         self.start_time = time.gmtime()
-        job_id = response.json()['id']
-        print(f"Transcription started at: " + time.strftime("%H:%M:%S", self.start_time))
-        print(f"Job ID: {job_id}")
-        return job_id
+        if response.status_code == 200:
+            job_id = response.json()['id']
+            print(f"Transcription started at: " + time.strftime("%H:%M:%S", self.start_time))
+            print(f"Job ID: {job_id}")
+            return job_id
+        else:
+            print(response.status_code)
+            print(response.text)
+            exit()
 
     def get_transcript_srt(self):
         if self.poll_status() == 'completed':

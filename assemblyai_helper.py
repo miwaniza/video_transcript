@@ -62,7 +62,7 @@ class AssemblyAI:
             # save response to file
             srt_folder = os.path.join(s.CONFIG.root, s.CONFIG.folders["srt"])
             output_file_srt = os.path.join(srt_folder, f"{self.output_name}.{s.ASSEMBLYAI.subtitles_format}")
-            output_file_csv = os.path.join(srt_folder, s.CONFIG.folders["srt"], f"{self.output_name}.csv")
+            output_file_csv = os.path.join(srt_folder, f"{self.output_name}.csv")
             with open(output_file_srt, "w") as f:
                 f.write(response.text)
             print(f"SRT saved to:\n{output_file_srt}")

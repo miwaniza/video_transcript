@@ -80,7 +80,7 @@ python3 app.py pdf /path/to/pdf/file.pdf name_of_output_file.txt 0
 usage: app.py aai [-h] i o
 
 positional arguments:
-  i           Input file. Must be in audio file format.
+  i           Input file. Must be in audio file format. Local or URL. Local one will be uploaded.
   o           Output filename. Output will be saved in VTT and CSV format in
               SRT folder.
 ```

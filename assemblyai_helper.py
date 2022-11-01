@@ -7,6 +7,7 @@ import webvtt
 
 import settings as s
 import io
+import validators
 
 
 class AssemblyAI:
@@ -19,7 +20,10 @@ class AssemblyAI:
         self.output_name = output_name
         self.start_time = None
         self.filepath = filepath
-        self.file_url = self.upload_file()
+        if validators.url(filepath):
+            self.file_url = filepath
+        else:
+            self.file_url = self.upload_file()
         self.job_id = self.set_transcribe_job()
         self.srt = self.get_transcript_srt()
         self.transcript = self.get_transcript()

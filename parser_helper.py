@@ -47,7 +47,7 @@ def parse_args():
     parser_pdf.set_defaults(func=process_pdf)
 
     parser_aai = subparsers.add_parser('aai', help='Process audio file with AssemblyAI')
-    parser_aai.add_argument('i', help='Input file. Must be in audio file format.')
+    parser_aai.add_argument('i', help='Input file. Must be in audio file format. Local or URL. Local one will be uploaded.')
     parser_aai.add_argument('o', help='Output filename. Output will be saved in VTT and CSV format in SRT folder.')
     parser_aai.set_defaults(func=process_aai)
 

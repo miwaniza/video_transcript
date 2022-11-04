@@ -16,7 +16,7 @@ class Media:
         self.clips = []
         if self.format in s.VIDEO.video_formats:
             self.extract_audio()
-            self.duration = float(ffmpeg.probe(self.target)['format']['duration'])
+            self.duration = float(ffmpeg.probe(self.source)['format']['duration'])
         elif self.format in s.AUDIO.audio_formats:
             shutil.copyfile(self.source, self.target)
         if (self.duration > s.AUDIO.SPLIT_DURATION) and (parent is None):

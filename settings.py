@@ -48,6 +48,7 @@ class AUDIO:
     audio_formats = ["wav", "mp3", "flac", "ogg", "m4a", "aac", "wma", "aiff"]
     SILENCE_DURATION = 0.3
     SILENCE_THRESHOLD = -60
+    SPLIT_DURATION = 30 * 60  # seconds
 
 
 class VIDEO:

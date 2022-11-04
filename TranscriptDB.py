@@ -1,14 +1,15 @@
 import datetime
+
+import ffmpeg
 import pandas as pd
 from sqlalchemy import Column, Integer, DateTime, String, Float
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-import settings as s
-from media_helper import Media
+from thefuzz import fuzz
+
 import assemblyai_helper as aai
 import pdf_helper
-from thefuzz import fuzz, process
-import webvtt
+import settings as s
 
 engine = create_engine(s.DATABASE.DB_URL)
 Base = declarative_base()
@@ -24,9 +25,9 @@ class AudioFile(Base):
     def __init__(self, file_path):
         self.id = None
         self.file_path = file_path
-        self.duration = Media(file_path).duration
+        self.duration = ffmpeg.probe(file_path)["format"]["duration"]
         self.save()
-        audio_clip = AudioClip(self.file_path, 0, self.duration, self.id)
+        AudioClip(self.file_path, 0, self.duration, self.id)
         print(self.id)
 
     def save(self):

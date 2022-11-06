@@ -14,7 +14,8 @@ class Media:
         self.duration = 0.0
         self.target = target
         self.clips = []
-        self.extract_audio()
+        # if self.format in s.VIDEO.video_formats:
+        #     self.extract_audio()
         self.duration = float(ffmpeg.probe(self.source)['format']['duration'])
         print(f"Audio duration: {self.duration}")
         if (self.duration > s.AUDIO.SPLIT_DURATION) and (parent is None):

@@ -14,14 +14,14 @@ class Media:
         self.duration = 0.0
         self.target = target
         self.clips = []
-        if self.format in s.VIDEO.video_formats:
-            self.extract_audio()
-            self.duration = float(ffmpeg.probe(self.source)['format']['duration'])
-        elif self.format in s.AUDIO.audio_formats:
-            shutil.copyfile(self.source, self.target)
+        self.extract_audio()
+        self.duration = float(ffmpeg.probe(self.source)['format']['duration'])
+        print(f"Audio duration: {self.duration}")
         if (self.duration > s.AUDIO.SPLIT_DURATION) and (parent is None):
+            print("Splitting audio")
             self.split_audio()
         else:
+            print("Audio is short enough to skip splitting")
             self.clips = [self]
 
     def split_audio(self):
@@ -40,8 +40,9 @@ class Media:
             start_time = end_time
             end_time += s.AUDIO.SPLIT_DURATION
         self.clips = clips
-        # export clips list to csv
+        print(f"Audio split into {len(clips)} clips")
         clips_csv = os.path.join(s.CONFIG.root, s.CONFIG.folders["clips"], f"{self.target.split('.')[0]}.csv")
+        print(f"Exporting clips list to {clips_csv}")
         with open(clips_csv, "w") as f:
             f.write("clip_name,start_time,end_time\n")
             for clip in clips:

@@ -13,7 +13,7 @@ def process_audio(i, o):
 
 
 def process_pdf(i, l, o):
-    tdb.PDF(i, l, os.path.join(s.CONFIG.root, s.CONFIG.folders["pdf"], o))
+    tdb.TranscriptFile(i, l, os.path.join(s.CONFIG.root, s.CONFIG.folders["pdf"], o))
 
 
 def process_aai(i, o):

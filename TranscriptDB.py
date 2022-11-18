@@ -8,7 +8,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from thefuzz import fuzz
 
 import assemblyai_helper as aai
-import pdf_helper
+import transcript_helper
 import settings as s
 
 engine = create_engine(s.DATABASE.DB_URL)
@@ -116,7 +116,7 @@ class Word(Base):
         self.id = self.id
 
 
-class PDF(Base):
+class TranscriptFile(Base):
     __tablename__ = "pdfs"
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
@@ -129,11 +129,16 @@ class PDF(Base):
         self.id = None
         self.audio_file_id = audio_file_id
         self.file_path = file_path
-        self.layout_type = layout_type
-        self.fixed_layout = self.fix_layout()
+        self.file_type = self.file_path.split(".")[-1]
         self.output_path = output_path
+        if self.file_type == "pdf":
+            self.layout_type = layout_type
+            self.fixed_layout = self.fix_layout()
         self.save()
-        self.save_lines()
+        if self.file_type == "pdf":
+            self.save_pdf_lines()
+        elif self.file_type == "txt":
+            self.save_txt_lines()
 
     def __repr__(self):
         return f"AudioFile(file_path={self.file_path}, duration={self.duration})"
@@ -149,16 +154,16 @@ class PDF(Base):
         # 2 by 2 pages on one page
         if self.layout_type == 1:
             fixed_name = self.file_path.replace(".pdf", "_fixed.pdf")
-            pdf_helper.slice_pdf_pages(self.file_path, fixed_name)
+            transcript_helper.slice_pdf_pages(self.file_path, fixed_name)
             return fixed_name
         else:
             return self.file_path
 
-    def save_lines(self):
-        pages = pdf_helper.pdf_to_text(self.fixed_layout)
+    def save_pdf_lines(self):
+        pages = transcript_helper.pdf_to_text(self.fixed_layout)
         pdf_lines = pd.DataFrame()
         for page_no, page in enumerate(pages):
-            lines = pdf_helper.get_lines_from_text(page, page_no + 1)
+            lines = transcript_helper.get_lines_from_text(page, page_no + 1)
             pdf_lines = pd.concat([pdf_lines, lines], ignore_index=True)
             # pdf_lines = pdf_lines.concat(lines)
         pdf_lines['speaker'] = pdf_lines['speaker'].ffill()

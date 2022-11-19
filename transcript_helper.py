@@ -10,6 +10,16 @@ def pdf_to_text(path):
     return pdf
 
 
+def txt_to_text(filepath):
+    with open(filepath, 'r') as file:
+        data = file.read()
+    # remove 0x0c form feed character
+    data = re.sub(r'\x0c', '', data)
+    #  split by page number
+    data = re.split(r'\s{20,}\d+', data)
+    return data
+
+
 def slice_pdf_pages(source, target):
     writer = pdfrw.PdfWriter()
     for page in pdfrw.PdfReader(source).pages:

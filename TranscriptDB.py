@@ -135,10 +135,7 @@ class TranscriptFile(Base):
             self.layout_type = layout_type
             self.fixed_layout = self.fix_layout()
         self.save()
-        if self.file_type == "pdf":
-            self.save_pdf_lines()
-        elif self.file_type == "txt":
-            self.save_txt_lines()
+        self.save_transcript_lines(self.file_type)
 
     def __repr__(self):
         return f"AudioFile(file_path={self.file_path}, duration={self.duration})"
@@ -159,19 +156,23 @@ class TranscriptFile(Base):
         else:
             return self.file_path
 
-    def save_pdf_lines(self):
-        pages = transcript_helper.pdf_to_text(self.fixed_layout)
-        pdf_lines = pd.DataFrame()
+    def save_transcript_lines(self, file_type):
+        if file_type == "pdf":
+            pages = transcript_helper.pdf_to_text(self.fixed_layout)
+        if file_type == "txt":
+            pages = transcript_helper.txt_to_text(self.file_path)
+
+        transcript_lines = pd.DataFrame()
         for page_no, page in enumerate(pages):
             lines = transcript_helper.get_lines_from_text(page, page_no + 1)
-            pdf_lines = pd.concat([pdf_lines, lines], ignore_index=True)
+            transcript_lines = pd.concat([transcript_lines, lines], ignore_index=True)
             # pdf_lines = pdf_lines.concat(lines)
-        pdf_lines['speaker'] = pdf_lines['speaker'].ffill()
-        pdf_lines['pdf_id'] = self.id
-        pdf_lines['text'] = pdf_lines['text'].str.rstrip()
+        transcript_lines['speaker'] = transcript_lines['speaker'].ffill()
+        transcript_lines['pdf_id'] = self.id
+        transcript_lines['text'] = transcript_lines['text'].str.rstrip()
         if self.output_path:
-            pdf_lines.to_csv(self.output_path, index=False, header=True)
-        pdf_lines.to_sql('pdf_lines', engine, if_exists='append', index=False)
+            transcript_lines.to_csv(self.output_path, index=False, header=True)
+        transcript_lines.to_sql('pdf_lines', engine, if_exists='append', index=False)
 
 
 class PdfLine(Base):

@@ -19,7 +19,6 @@ class Media:
         self.duration = float(ffmpeg.probe(self.source)['format']['duration'])
         print(f"Audio duration: {self.duration}")
         if (self.duration > s.AUDIO.SPLIT_DURATION) and (parent is None):
-            print("Splitting audio")
             self.split_audio()
         else:
             print("Audio is short enough to skip splitting")

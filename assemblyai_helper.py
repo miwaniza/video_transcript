@@ -34,9 +34,14 @@ class AssemblyAI:
         file_upload = requests.post(f"{self.api_url}/upload",
                                     headers=self.headers,
                                     data=read_file(self.filepath))
-        file_url = file_upload.json()['upload_url']
-        print(f"File uploaded to:\n{file_url}")
-        return file_url
+        if file_upload.status_code == 200:
+            file_url = file_upload.json()['upload_url']
+            print(f"File uploaded to:\n{file_url}")
+            return file_url
+        else:
+            print(file_upload.status_code)
+            print(file_upload.text)
+            exit()
 
     def set_transcribe_job(self):
         print(f"Transcribing file:\n{self.file_url}")

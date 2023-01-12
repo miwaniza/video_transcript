@@ -63,49 +63,71 @@ class AssemblyAI:
         if self.poll_status() == 'completed':
             response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}/{s.ASSEMBLYAI.subtitles_format}",
                                     headers=self.headers)
+            if response.status_code == 200:
+                # save response to file
+                srt_folder = os.path.join(s.CONFIG.root, s.CONFIG.folders["srt"])
+                output_file_srt = os.path.join(srt_folder, f"{self.output_name}.{s.ASSEMBLYAI.subtitles_format}")
+                output_file_csv = os.path.join(srt_folder, f"{self.output_name}.csv")
+                with open(output_file_srt, "w") as f:
+                    f.write(response.text)
+                print(f"SRT saved to:\n{output_file_srt}")
 
-            # save response to file
-            srt_folder = os.path.join(s.CONFIG.root, s.CONFIG.folders["srt"])
-            output_file_srt = os.path.join(srt_folder, f"{self.output_name}.{s.ASSEMBLYAI.subtitles_format}")
-            output_file_csv = os.path.join(srt_folder, f"{self.output_name}.csv")
-            with open(output_file_srt, "w") as f:
-                f.write(response.text)
-            print(f"SRT saved to:\n{output_file_srt}")
+                df = pd.DataFrame(columns=['start', 'end', 'text', 'audio_file_id'])
 
-            df = pd.DataFrame(columns=['start', 'end', 'text', 'audio_file_id'])
-
-            for caption in webvtt.read_buffer(io.StringIO(response.text)):
-                df = pd.concat([df, pd.DataFrame([[caption.start_in_seconds, caption.end_in_seconds, caption.text, self.filepath]],
-                                                    columns=['start', 'end', 'text', 'audio_file_id'])], ignore_index=True)
-            df.to_csv(output_file_csv, index=False)
-            return df
+                for caption in webvtt.read_buffer(io.StringIO(response.text)):
+                    df = pd.concat([df, pd.DataFrame([[caption.start_in_seconds, caption.end_in_seconds, caption.text, self.filepath]],
+                                                        columns=['start', 'end', 'text', 'audio_file_id'])], ignore_index=True)
+                df.to_csv(output_file_csv, index=False)
+                return df
+            else:
+                print(response.status_code)
+                print(response.text)
+                exit
 
     def get_transcript(self):
         print("Getting transcript...")
         if self.poll_status() == 'completed':
             response = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
                                     headers=self.headers)
-            return response.json()
+
+            if response.status_code == 200:
+                transcript = response.json()
+                print(f"Transcript saved to:\n{transcript['text_url']}")
+                return transcript
+            else:
+                print(response.status_code)
+                print(response.text)
+                exit()
 
     def poll_status(self):
         print("Polling status...")
-        status = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
-                              headers=self.headers).json()['status']
-        # print time from start in hh:mm:ss
-        while status not in ['completed', 'error']:
-            time.sleep(s.ASSEMBLYAI.polling_interval)
-            print(f"Sleeping for {s.ASSEMBLYAI.polling_interval} seconds...")
-            status = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
-                                  headers=self.headers).json()['status']
-        if status == 'error':
-            print("Error occurred. Exiting...")
+        resp = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
+                              headers=self.headers)
+        if resp.status_code == 200:
+            status = resp.json()['status']
+            # print time from start in hh:mm:ss
+            while status not in ['completed', 'error']:
+                time.sleep(s.ASSEMBLYAI.polling_interval)
+                print(f"Sleeping for {s.ASSEMBLYAI.polling_interval} seconds...")
+                status = requests.get(f"{s.ASSEMBLYAI.api_url}/transcript/{self.job_id}",
+                                      headers=self.headers).json()['status']
+            if status == 'error':
+                print("Error occurred. Exiting...")
+                exit()
+            elif status == 'completed':
+                # job took hh:mm:ss
+                return status
+        else:
+            print(resp.status_code)
+            print(resp.text)
             exit()
-        elif status == 'completed':
-            # job took hh:mm:ss
-            return status
 
 
 def read_file(filepath, chunk_size=s.ASSEMBLYAI.chunk_size):
+    if not os.path.isfile(filepath):
+        print(f"File not found: {filepath}")
+        exit()
+
     with open(filepath, 'rb') as _file:
         while True:
             data = _file.read(chunk_size)
